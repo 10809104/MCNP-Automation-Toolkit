@@ -1,0 +1,21 @@
+# .github/workflows/c-build.yml
+name: C Build Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install MinGW
+      run: choco install mingw -y
+    - name: Compile C Parser
+      run: |
+        cd Parser
+        gcc -o MCNP_Parser.exe main.c -lcomdlg32 -lshell32 -lgdi32 -lwininet -lurlmon -lshlwapi
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: MCNP_Parser
+        path: Parser/MCNP_Parser.exe

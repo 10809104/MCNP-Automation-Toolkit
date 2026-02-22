@@ -4,6 +4,8 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)]()
 [![C Language](https://img.shields.io/badge/language-C-green.svg)]()
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-lightgrey.svg)]()
+[![Python Lint](https://github.com/10809104/MCNP-Automation-Toolkit/actions/workflows/python-lint.yml/badge.svg)](https://github.com/10809104/MCNP-Automation-Toolkit/actions/workflows/python-lint.yml)
+[![C Build](https://github.com/10809104/MCNP-Automation-Toolkit/actions/workflows/c-build.yml/badge.svg)](https://github.com/10809104/MCNP-Automation-Toolkit/actions/workflows/c-build.yml)
 
 **A high‑performance workflow suite for MCNP6 simulations, bridging the gap between resource‑aware task orchestration and lightning‑fast data post‑processing.**
 

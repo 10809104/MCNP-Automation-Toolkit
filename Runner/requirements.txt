@@ -1,0 +1,4 @@
+# MCNP Runner dependencies
+# pip install -r requirements.txt
+
+psutil>=5.8.0    # System resource monitoring (CPU/RAM)

@@ -18,7 +18,7 @@ Running MCNP simulations often involves tedious manual work: babysitting system 
 - **The Orchestrator (Python)** – intelligently manages your hardware and schedules tasks so your PC stays responsive.
 - **The Parser (C)** – extracts simulation results at blazing speed, turning messy `.o` files into clean spreadsheets.
 
-Whether you’re running a single case or a hundred, this toolkit lets you focus on science, not housekeeping.
+Whether you're running a single case or a hundred, this toolkit lets you focus on science, not housekeeping.
 
 ---
 
@@ -46,26 +46,25 @@ cd MCNP-Automation-Toolkit
 cd Parser
 gcc -o MCNP_Parser.exe main.c -lcomdlg32 -lshell32 -lgdi32 -lwininet -lurlmon -lshlwapi
 ```
-> **Note**: You can skip this step by downloading `MCNP_Parser.exe` from the [Releases](https://github.com/10809104/MCNP-Automation-Toolkit/releases) page.
+> **Note**: You can skip this step by downloading `MCNP_Parser.exe` from the [Releases](https://github.com/yourusername/MCNP-Automation-Toolkit/releases) page.
 
 ### 3️⃣ Install Python dependencies (if running from source)
 ```bash
 cd ../Runner
 pip install -r requirements.txt   # only requires psutil
 ```
-> **Note**: You can skip this step by downloading `MCNP_Runner.exe` from the [Releases](https://github.com/10809104/MCNP-Automation-Toolkit/releases) page.
 
 ### 4️⃣ Run the full workflow
-- **Option A (source)**: `python MCNP_Runner.py` or 
+- **Option A (source)**: `python MCNP_Runner.py`
 - **Option B (pre‑built)**: Download `MCNP_Runner.exe` from Releases and double‑click.
 
 The GUI will guide you through selecting:
 - Your MCNP environment batch file (e.g., `mcnp_630_env.bat`)
-- The working directory containing your `model parameter`
-- The specific `.i` input files to run
+- The working directory containing your `.i` input files
+- The specific input files to run
 - CPU and RAM usage limits
 
-After all simulations finish, you’ll be prompted to launch the **Data Parser** to generate reports.
+After all simulations finish, you'll be prompted to launch the **Data Parser** to generate reports.
 
 ---
 
@@ -77,15 +76,39 @@ MCNP-Automation-Toolkit/
 │   ├── MCNP_Runner.py          # Main entry point
 │   ├── requirements.txt        # Python dependencies
 │   └── README.md               # Component‑specific docs
-├── Parser/                      # C source for the Data Parser
-│   ├── include/                 # Header files (config.h, tools.h)
-│   ├── src/                     # main.c
-│   ├── Scripts/                 # Helper scripts (e.g., merge.ps1 for Excel)
-│   ├── other/                   # ico and other
+│
+├── Parser/                      # C source for the Data Parser (flat structure for Dev‑C++)
+│   ├── main.c                   # Main program (originally in src/)
+│   ├── config.h                 # Configuration header
+│   ├── tools.h                  # Core parsing functions
+│   ├── merge.ps1                # PowerShell script for Excel integration
+│   ├── MCNP_Parser.dev          # Dev-c++
+│   ├── MCNP_Parser.ico          # Application icon (optional)
+│   ├── MCNP_Parser.rc           # Application icon config
+│   ├── version.txt              # for auto update
 │   └── README.md                # Component‑specific docs
-├── Examples/                     # result image
+│
+├── Examples/                     # Result screenshots and sample outputs
+│   ├── runner_demo.png
+│   ├── parser_demo.png
+│   └── sample_report.csv
+│
 └── README.md                      # This file
 ```
+
+> **Note for Dev‑C++ users**: All C source files are kept in the same directory (`Parser/`) for easy opening with Dev‑C++ projects. Simply open `main.c` and compile.
+
+---
+
+## 🖼️ Examples
+
+### Runner in Action
+![Runner Demo](./Examples/runner_demo.png)
+*The retro‑style dashboard showing active tasks and resource usage*
+
+### Parser Output
+![Parser Demo](./Examples/parser_demo.png)
+*Clean, aligned CSV output ready for analysis*
 
 ---
 
@@ -93,10 +116,9 @@ MCNP-Automation-Toolkit/
 
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
 
-> **Developer's Note**: This toolkit was born from real nuclear engineering research. You may encounter mixed Chinese/English comments in the source – a mark of its “battle‑tested” origins.
+> **Developer's Note**: This toolkit was born from real nuclear engineering research. You may encounter mixed Chinese/English comments in the source – a mark of its "battle‑tested" origins.
 
 ---
-
 About ``` Parser/ ```You can get more from[MCNP-Data-Toolkit](https://github.com/10809104/MCNP-Data-Toolkit/)
 
 **Now go automate your MCNP workflow!**  

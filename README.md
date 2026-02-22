@@ -37,7 +37,7 @@ Both tools can be used independently, or you can chain them together for a fully
 
 ### 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/yourusername/MCNP-Automation-Toolkit.git
+git clone https://github.com/10809104/MCNP-Automation-Toolkit.git
 cd MCNP-Automation-Toolkit
 ```
 

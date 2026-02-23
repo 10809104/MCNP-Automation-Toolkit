@@ -253,6 +253,8 @@ class ResourceMonitor:
             ram_now = psutil.virtual_memory().percent
 
             current_processes = list(psutil.process_iter(['pid', 'name']))
+            current_pids = {p.info['pid'] for p in current_processes}
+            self.known_pids &= current_pids
             triggered = False
 
             for p in current_processes:
@@ -371,9 +373,9 @@ class RetroRunner(threading.Thread):
         term.run()
 
         os.system("cls")
-        print("          === MCNP Auto Manage System ===")
-        print("          Code Name & Version = mcnp6, 6.3.0, production")
-        print("          Copyright Triad National Security, LLC/LANL/DOE - see LICENSE file\n")
+        print("=== MCNP Auto Manage System ===")
+        print("Code Name & Version = mcnp6, 6.3.0, production")
+        print("Copyright Triad National Security, LLC/LANL/DOE - see LICENSE file\n")
         print("""\
     _/      _/        _/_/_/       _/      _/       _/_/_/         _/_/_/
     _/_/  _/_/      _/             _/_/    _/       _/    _/     _/
@@ -797,13 +799,6 @@ def main():
     print("          === MCNP Auto Manage System ===")
     print("          Code Name & Version = mcnp6, 6.3.0, production")
     print("          Copyright Triad National Security, LLC/LANL/DOE - see LICENSE file\n")
-    # print("""\
-# _/      _/        _/_/_/       _/      _/       _/_/_/         _/_/_/
-# _/_/  _/_/      _/             _/_/    _/       _/    _/     _/
-# _/  _/  _/      _/             _/  _/  _/       _/_/_/       _/_/_/
-# _/      _/      _/             _/    _/_/       _/           _/    _/
-# _/      _/        _/_/_/       _/      _/       _/             _/_/
-# """)
     print("""\
      _/      _/        _/_/_/       _/      _/       _/_/_/         _/_/_/
     _/_/  _/_/      _/             _/_/    _/       _/    _/     _/

@@ -58,6 +58,22 @@ To ensure the parser works correctly, your `source.csv` should follow this struc
 
 The parser will look for `.o` files named `Model_A.o`, `Model_B.o`, etc., extract the Tally data, and append it to the right side of the corresponding row.
 
+### 1. Environment Setup
+
+Place `main.exe`, `merge.ps1`, and `source.csv` in the same directory.
+Organize the simulation data files (`.o` files) into subfolders by category within that directory.
+
+### 2. Launch and Version Check
+
+Run `main.exe`.
+The system will automatically connect to the internet to check for updates. If a new version is available, click **“Yes”**. The program will automatically update itself and restart.
+
+### 3. One-Click Report Generation
+
+Select the target folder in the interface, then click **“Batch Process”**.
+After parsing is complete, the system will invoke PowerShell in the background to perform all Excel formatting tasks and generate the final report file: `MCNP_Total_Summary.xlsx`.
+
+
 ---
 
 ## 🛠 Technical Details

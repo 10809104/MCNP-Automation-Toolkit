@@ -50,9 +50,25 @@ python MCNP_Runner.py
 
 ```
 
+---
 
+## 📂 Code Structure
+
+```
+
+Main Thread
+ ├── Manager Thread
+ │     ├── Worker Threads
+ │     └── display_status (run/stop)
+ │
+ ├── ResourceMonitor Thread
+ │
+ └── RetroRunner Thread
+
+```
 
 ---
+
 
 ## 🕹️ Retro Terminal Mode
 

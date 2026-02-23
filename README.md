@@ -12,7 +12,8 @@
 ---
 
 ## 🌐 Language / 語言選擇
-- [**English Description**](./README.md) [**中文說明文件**](./讀我.md)
+- [**English Description**](./README.md)
+- [**中文說明文件**](./讀我.md)
 
 ---
 
@@ -53,7 +54,7 @@ cd MCNP-Automation-Toolkit
 cd Parser
 gcc -o MCNP_Parser.exe main.c -lcomdlg32 -lshell32 -lgdi32 -lwininet -lurlmon -lshlwapi
 ```
-> **Note**: You can skip this step by downloading `MCNP_Parser.exe` from the [Releases](https://github.com/yourusername/MCNP-Automation-Toolkit/releases) page.
+> **Note**: You can skip this step by downloading `MCNP_Parser.exe` from the [Releases](https://github.com/10809104/MCNP-Automation-Toolkit/releases) page.
 
 ### 3️⃣ Install Python dependencies (if running from source)
 ```bash
@@ -67,11 +68,17 @@ pip install -r requirements.txt   # only requires psutil
 
 The GUI will guide you through selecting:
 - Your MCNP environment batch file (e.g., `mcnp_630_env.bat`)
-- The working directory containing your `.i` input files
+- The working directory containing your `model parameter`
 - The specific input files to run
 - CPU and RAM usage limits
 
-After all simulations finish, you'll be prompted to launch the **Data Parser** to generate reports.
+**After all simulations finish, you can run `MCNP_Parser.exe`**
+
+The GUI will guide you to:
+- Click **HELP** to understand the required file structure and placement
+- Select the source CSV files
+- Choose the working directory containing your `.o` output files
+- After processing completes, decide whether to merge the results into a single `.xlsx` file
 
 ---
 

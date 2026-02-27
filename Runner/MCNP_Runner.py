@@ -223,8 +223,9 @@ class ResourceMonitor:
         self.start_cooldown = 15      # 秒（可調）
         self.last_start_time = 0     # 上次啟動時間
         self.smoothed_cpu = 0
+        self.smoothed_avg_cpu = 0
         self.alpha = 0.3  # 平滑係數
-        self.ram_safety_buffer = 10  # %（可調）
+        self.ram_safety_buffer = 0  # %（可調）
         
     # ------------------------
     # PID / 系統進程判斷
@@ -297,17 +298,6 @@ class ResourceMonitor:
             return False, 0, 0
         
     def _loop(self):
-        """
-        監控主循環（背景執行緒）
-
-        持續呼叫 scan()：
-        - 掃描新出現的非白名單進程
-        - 檢查是否超過 CPU / RAM 限制
-        - 必要時觸發警告視窗
-
-        此迴圈會在 start() 被呼叫後啟動，
-        並在 stop() 將 _running 設為 False 時安全結束。
-        """
         while self._running:
             self.scan()
             time.sleep(1)
@@ -330,26 +320,11 @@ class ResourceMonitor:
     # 其他功能
     # ------------------------
     def add_pid(self, pid):
-        """
-        將新啟動的 Worker PID 加入追蹤清單。
-
-        功能：
-        1. 呼叫 cpu_percent(interval=None) 做 warmup，
-           避免第一次讀取時永遠回傳 0。
-        2. 將 PID 加入 tracked_pids，
-           供 is_system_okay() 計算 worker 資源使用量。
-        """
         with self.pid_lock:
             psutil.Process(pid).cpu_percent(interval=None)
             self.tracked_pids.add(pid)
 
     def remove_pid(self, pid):
-        """
-        從追蹤清單移除已結束的 Worker PID。
-
-        由 MCNPManager 在任務完成時呼叫，
-        避免已不存在的進程影響資源統計。
-        """
         with self.pid_lock:
             self.tracked_pids.discard(pid)
     
@@ -371,36 +346,53 @@ class ResourceMonitor:
         current_ram_percent = vm.percent
         total_ram = vm.total
 
-        worker_cpu = 0
-        worker_ram = 0
-
         with self.pid_lock:
+            processes = []
+
             for pid in list(self.tracked_pids):
                 try:
                     p = psutil.Process(pid)
-
-                    worker_cpu += p.cpu_percent(interval=None)
-                    worker_ram += p.memory_info().rss
-
-                    for child in p.children(recursive=True):
-                        worker_cpu += child.cpu_percent(interval=None)# warmup
-                        worker_ram += child.memory_info().rss
+                    processes.append(p)
+                    processes.extend(p.children(recursive=True))
                 except psutil.NoSuchProcess:
                     self.tracked_pids.discard(pid)
 
-            worker_count = len(self.tracked_pids)
+        # warmup（不要加總）
+        for proc in processes:
+            try:
+                proc.cpu_percent(None)
+            except psutil.NoSuchProcess:
+                pass
+        
+        time.sleep(0.1)
+        
+        worker_cpu = 0
+        worker_ram = 0
+
+        for proc in processes:
+            try:
+                worker_cpu += proc.cpu_percent(None)
+                worker_ram += proc.memory_info().rss
+            except psutil.NoSuchProcess:
+                pass
+
+        worker_count = len(self.tracked_pids)
 
         # --- 預測增量 ---
         if worker_count > 0:
-            avg_cpu = worker_cpu / worker_count
+            avg_cpu = (worker_cpu / worker_count) / self.logical_cores
+            self.smoothed_avg_cpu = (
+                self.alpha * avg_cpu +
+                (1 - self.alpha) * self.smoothed_avg_cpu
+            )
+            avg_cpu = self.smoothed_avg_cpu
             avg_ram = worker_ram / worker_count
         else:
-            avg_cpu = 20
-            avg_ram = 200 * 1024 * 1024
+            avg_cpu = (1 / self.logical_cores *100)
+            avg_ram = 3 * 1024 * 1024 * 1024
 
         predicted_cpu = self.smoothed_cpu + avg_cpu
         predicted_ram = current_ram_percent + (avg_ram / total_ram * 100)
-
         return (
             predicted_cpu <= self.cpu_limit and
             predicted_ram <= (self.ram_limit - self.ram_safety_buffer) and
@@ -420,14 +412,6 @@ class RetroRunner(threading.Thread):
         self.duration = duration
 
     def run(self):
-        """
-        復古模式執行流程：
-
-        1. 暫停 Manager 的即時狀態顯示
-        2. 啟動 RetroTerminal（模擬 DOS 畫面）
-        3. 結束後恢復正常模式
-        4. 重置穩定計時，避免立刻再次觸發
-        """
         self.manager.in_retro_mode = True
         time.sleep(1.2)
         os.system("cls")
@@ -647,15 +631,6 @@ class MCNPWorker(threading.Thread):
         self.original_dir = self.input_path.parent
 
     def safe_move(self, src, dst):
-        """
-        安全搬移檔案工具函式。
-
-        功能：
-        - 若來源不存在則忽略
-        - 若來源與目的地相同則不處理
-        - 若目的地已存在則先刪除再搬移
-        - 捕捉例外避免中斷 Worker 流程
-        """
         if not src.exists():
             return
 
@@ -671,16 +646,6 @@ class MCNPWorker(threading.Thread):
             print(f"[MOVE ERROR] {src} -> {dst} : {e}")
 
     def run(self):
-        """
-        Worker 主執行流程：
-
-        1. 將輸入檔搬至 model_dir
-        2. 呼叫批次檔並執行 mcnp6
-        3. 透過 on_spawn 回報 PID 給 Manager / Monitor
-        4. 等待計算完成
-        5. 將輸出檔搬回原目錄
-        6. 呼叫 on_finish 回報任務完成
-        """
         try:
             target_input = self.model_dir / self.input_name
             self.safe_move(self.input_path, target_input)
@@ -774,13 +739,6 @@ class MCNPManager:
                 self.finished[task_id] = task_info["path"]
                 
     def on_spawn(self, task_id, pid):
-        """
-        當 Worker 成功啟動 subprocess 時呼叫。
-
-        功能：
-        - 將 PID 記錄到 running 任務資訊
-        - 通知 ResourceMonitor 開始追蹤此 PID
-        """
         with self.lock:
             self.running[task_id]["pid"] = pid
         self.monitor.add_pid(pid)
@@ -887,29 +845,10 @@ class MCNPManager:
         sys.stdout.flush()
         
     def release_retro_lock(self):
-        """
-        安全釋放 retro 模式鎖。
-
-        避免鎖未釋放導致後續無法再次進入復古模式。
-        """
         if self._retro_lock.locked():
             self._retro_lock.release()
     
 def main():
-    """
-    系統主入口：
-
-    1. 初始化終端畫面
-    2. 透過 GUI 取得執行參數
-       - batch 檔
-       - 模型資料夾
-       - 輸入檔
-       - CPU / RAM 限制
-    3. 建立 ResourceMonitor 並啟動
-    4. 建立 MCNPManager 並啟動調度執行緒
-    5. 持續監控是否進入穩定狀態，
-       若穩定超過指定時間則啟動 Retro 模式
-    """
     if os.name == 'nt': ctypes.windll.kernel32.SetConsoleTitleW("MCNP 6.3.0 Command Windaw")
     # 1. 確保 Windows CMD 支援 ANSI 轉義碼 (顏色與定位)
     if os.name == 'nt': os.system('')

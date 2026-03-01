@@ -174,8 +174,6 @@ class ConfigLoader:
     def close(self):
         """釋放 Tkinter 資源"""
         self.root.destroy()
-        
-import tkinter as tk
 
 def custom_warning(title, message, button_text="確定"):
     root = tk.Tk()
@@ -406,9 +404,10 @@ class ResourceMonitor:
         return f"CPU: {cpu}% | RAM: {ram}%"
         
 class RetroRunner(threading.Thread):
-    def __init__(self, manager, duration=60):
+    def __init__(self, manager, monitor=None, duration=60):
         super().__init__(daemon=True)
         self.manager = manager
+        self.monitor = monitor
         self.duration = duration
 
     def run(self):
@@ -416,7 +415,7 @@ class RetroRunner(threading.Thread):
         time.sleep(1.2)
         os.system("cls")
 
-        term = RetroTerminal(duration=self.duration, manager=self.manager)
+        term = RetroTerminal(duration=self.duration, manager=self.manager, monitor=self.monitor)
         term.run()
 
         os.system("cls")
@@ -438,13 +437,25 @@ class RetroRunner(threading.Thread):
         self.manager.release_retro_lock()
         
 class RetroTerminal:
-    def __init__(self, duration=60, manager=None):
+    def __init__(self, duration=60, manager=None, monitor=None):
         self.duration = duration
         self.manager = manager
+        self.monitor = monitor
         self.width = 60
         self.height = 10
         self.start_time = 0
         self.is_running = True
+        self.idle_timeout = 15
+        self.commands = {
+            "HELP": self.cmd_help,
+            "DIR": self.cmd_dir,
+            "GAME": self.cmd_game,
+            "STATUS": self.cmd_status,
+            "RESMANAGER": self.cmd_resmanager,
+            "IDLE": self.cmd_idle,
+            "CLS": self.cmd_cls,
+            "EXIT": self.cmd_exit,
+        }
 
     def _clear(self):
         os.system("cls" if os.name == "nt" else "clear")
@@ -467,7 +478,7 @@ class RetroTerminal:
         time.sleep(0.5)
 
     # --- 2. 數位雨特效 ---
-    def matrix_rain(self, count=5, duration=1):
+    def matrix_rain(self, count=3, duration=1):
         chars = ["0", "1", " ", " ", "X", "Y", "Z", "!", "#", "*"]
         for _ in range(count):
             end = time.time() + duration
@@ -556,38 +567,127 @@ class RetroTerminal:
             sys.stdout.write("\033[3;1H" + output)
             sys.stdout.flush()
             time.sleep(0.06)
+            
+    # ====================================
+    # 指令方法區
+    # ====================================
+    def prompt(self):
+        sys.stdout.write("C:\\> ")
+        sys.stdout.flush()
+    def print_header(self):
+        print("MCNP-DOS Version 1.1 (C)1985 Quantum Dynamics\n")
+    def reset_screen(self):
+        self._clear()
+        self.print_header()
+    def wait_key(self):
+        msvcrt.getch()
+        
+    def cmd_help(self, args=""):
+        print("Available commands:", ", ".join(self.commands.keys()))
+    def cmd_dir(self, args=""):
+        print("\n Volume in drive C is MCNP_DATA")
+        print(" Directory of C:\\\n")
+        print("MCNP6    EXE    1,240,122  05-12-85")
+        print("SHMUP    COM       45,102  01-10-86")
+        print("      2 File(s)    1,285,224 bytes")
+        print("\nPress any key to continue...")
+        self.wait_key()
+        print("")
+    def cmd_game(self, args=""):
+        self.play_game()
+        self.reset_screen()
+    def cmd_status(self, args=""):
+        if not self.manager:
+            print("No manager attached.")
+            return
 
+        # args 可以是 -R等
+        if args == "-R":
+            print(f"[狀態] 目前資源設定:\nCPU: {self.monitor.cpu_limit}\nRAM: {self.monitor.ram_limit}")
+        elif args:
+            print(f"\n[錯誤]Unknown 'status' option: '{args}'")
+        else:
+            # 預設狀態顯示
+            print("\n" + self.manager.get_status_text())
+    def cmd_resmanager(self, args=""):
+        if not self.manager:
+            print("No manager or loader attached.")
+            return
+
+        # 檢查是否有帶參數
+        args = args.strip()
+        if args.startswith("-"):
+            try:
+                # 解析格式: 移除第一個 "-", 然後用 "-" 分割
+                parts = args[1:].split("-")
+                if len(parts) == 2:
+                    new_cpu = int(parts[0])
+                    new_ram = int(parts[1])
+                    
+                    # 範圍檢查
+                    if 10 <= new_cpu <= 85 and 10 <= new_ram <= 85:
+                        self.monitor.cpu_limit = new_cpu
+                        self.monitor.ram_limit = new_ram
+                        print(f"\n[成功] 資源上限已直接更新：")
+                        print(f" > CPU Limit: {self.monitor.cpu_limit}%")
+                        print(f" > RAM Limit: {self.monitor.ram_limit}%")
+                        return # 直接結束，不執行後面的彈窗邏輯
+                    else:
+                        print("[錯誤] 數值超出範圍 (10-85)。")
+                else:
+                    print("[錯誤] 請使用 RESMANAGER -[cpu limit] -[ram limit]")
+            except ValueError:
+                print("[錯誤] 請確保輸入的是整數數字。")
+        else:
+            print("hint: cmd_resmanager -[cpu limit] -[ram limit]")
+    def cmd_idle(self, args=""):
+            # 移除前後空白
+            args = args.strip()
+            
+            print("\n[系統] 進入待機時間設定模式...")
+
+            # 檢查是否有輸入參數 (例如: IDLE 60 或 IDLE -60)
+            if args:
+                try:
+                    # 處理可能帶有 "-" 符號的情況，並轉為絕對值或特定邏輯
+                    val_str = args.replace("-", "") if args.startswith("-") else args
+                    new_sleep = int(val_str)
+
+                    if new_sleep <= 0:
+                        print("[錯誤] 待機時間必須大於 0 秒。")
+                        return
+
+                    # 更新 RetroTerminal 內部的變數 (假設變數名為 self.idle_timeout)
+                    self.idle_timeout = new_sleep 
+                    print(f"[成功] 螢幕保護程式觸發時間已設定為: {self.idle_timeout} 秒。")
+
+                except ValueError:
+                    print(f"[錯誤] 無法解析參數 '{args}'。請輸入有效的數字。")
+            else:
+                # 如果沒有帶參數，可以選擇跳出目前的設定，或顯示當前設定
+                print(f"[狀態] 目前待機時間設定為: {self.idle_timeout} sec。")
+                print("hint: IDLE -[sec]")
+    def cmd_cls(self, args=""):
+        self.reset_screen()
+    def cmd_exit(self, args=""):
+        self.is_running = False
+        
     # --- 5. 指令處理器 ---
     def handle_command(self, cmd):
-        if cmd == "HELP":
-            print("Available commands: DIR, GAME, STATUS, CLS, HELP, EXIT")
-        elif cmd == "DIR":
-            print("\n Volume in drive C is MCNP_DATA")
-            print(" Directory of C:\\\n")
-            print("MCNP6    EXE    1,240,122  05-12-85")
-            print("SHMUP    COM       45,102  01-10-86")
-            print("      2 File(s)    1,285,224 bytes")
-            print("\nPress any key to continue...")
-            msvcrt.getch()
-            print("")
-        elif cmd == "GAME":
-            self.play_game()
-            self._clear()
-            print("MCNP-DOS Version 1.1 (C)1985 Quantum Dynamics\n")
-        elif cmd == "STATUS":
-            if self.manager:
-                print("\n" + self.manager.get_status_text())
-            else:
-                print("No manager attached.")
-        elif cmd == "CLS":
-            self._clear()
-            print("MCNP-DOS Version 1.1 (C)1985 Quantum Dynamics\n")
-        elif cmd == "EXIT":
-            self.is_running = False
-        elif cmd == "":
-            pass
+        # 指令處理
+        cmd = cmd.strip().upper()
+        if not cmd: return
+        
+        parts = cmd.split(maxsplit=1)  # 拆成指令 + 參數
+        command = parts[0]
+        args = parts[1] if len(parts) > 1 else ""
+
+        action = self.commands.get(command)
+            
+        if action:
+            action(args)
         else:
-            print(f"Bad command or file name: '{cmd}'")
+            print(f"[錯誤] Bad command or file name: '{command}'")
 
     # --- 6. 主執行入口 ---
     def run(self):
@@ -599,20 +699,19 @@ class RetroTerminal:
         
         self.start_time = time.time()
         while self.is_running and (time.time() - self.start_time < self.duration):
-            sys.stdout.write("C:\\> ")
-            sys.stdout.flush()
+            self.prompt()
             
             # 5秒待機偵測
             wait_start = time.time()
             has_input = False
-            while time.time() - wait_start < 5:
+            while time.time() - wait_start < self.idle_timeout:
                 if msvcrt.kbhit():
                     has_input = True
                     break
                 time.sleep(0.1)
             
             if has_input:
-                cmd = input().upper().strip()
+                cmd = input()
                 self.handle_command(cmd)
             else:
                 self.starfield()
@@ -804,7 +903,7 @@ class MCNPManager:
     def _get_spinner(self, t):
         # 建立一個左右來回移動的符號，表示正在運算
         icons = ["■----", "-■---", "--■--", "---■-", "----■", "---■-", "--■--", "-■---"]
-        return icons[int(t * 4) % len(icons)]
+        return icons[int(t) % len(icons)]
         
     def display_status(self):
         """
@@ -883,8 +982,8 @@ def main():
     if not input_files: exit("沒有選擇檔案")
     else: print(f"selected '{len(input_files)}' files.")
     num1, num2 = loader.select_two_numbers()
-    
     loader.close()
+    
     # 4. 建立任務
     monitor = ResourceMonitor(cpu_limit=num1, ram_limit=num2, cooldown=5)
     monitor.start()
@@ -897,10 +996,11 @@ def main():
 
         if manager.is_stable_for(20):
             if manager._retro_lock.acquire(blocking=False):
-                retro = RetroRunner(manager, duration=120)
+                retro = RetroRunner(manager, monitor, duration=120)
                 retro.start()
 
         time.sleep(2)
+        
     
 if __name__ == "__main__":
     main()

@@ -49,12 +49,12 @@ jobs:
         path: Parser/MCNP_Parser.exe
 
     - name: Update Latest Release Asset
-        # 僅在 push 到 main 分支時才執行 Release 覆蓋
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.get_tag.outputs.tag }}
-          files: Parser/MCNP_Parser.exe
-          overwrite: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 僅在 push 到 main 分支時才執行 Release 覆蓋
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag }}
+        files: Parser/MCNP_Parser.exe
+        overwrite: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

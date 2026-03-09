@@ -1,21 +1,60 @@
 # .github/workflows/c-build.yml
-name: C Build Test
+name: C Build and Auto-Release Update
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:      # 允許手動執行
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest
+    
+    # 給予權限以更新 Release
+    permissions:
+      contents: write
+      
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get Latest Release Tag
+      id: get_tag
+      shell: bash
+      run: |
+        # 取得最新標籤名稱，若無 Release 則預設為 v1.0.0
+        LATEST_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+        if [ "$LATEST_TAG" == "null" ]; then LATEST_TAG="v1.0.0"; fi
+        echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        echo "目前的最新標籤是: $LATEST_TAG"
+
     - name: Install MinGW
-      run: choco install mingw -y
-    - name: Compile C Parser
+      run: |
+        # Windows-latest 通常已內建 MinGW，但確保路徑正確
+        echo "C:\ProgramData\Chocolatey\bin" >> $GITHUB_PATH
+        echo "C:\ProgramData\Chocolatey\lib\mingw\tools\install\mingw64\bin" >> $GITHUB_PATH
+      
+    - name: Compile and Program C Parser
       run: |
         cd Parser
-        gcc -o MCNP_Parser.exe main.c -lcomdlg32 -lshell32 -lgdi32 -lwininet -lurlmon -lshlwapi
-    - name: Upload artifact
+        windres MCNP_Parser_private.rc -O coff -o resource.res
+        gcc main.c resource.res -o "MCNP_Parser.exe" -std=c99 -static -mwindows -lwininet -lshlwapi -lurlmon -lcomdlg32 -lgdi32 -luser32 -lshell32
+
+    - name: Upload artifact(用於 GitHub 介面下載測試)
       uses: actions/upload-artifact@v4
       with:
         name: MCNP_Parser
         path: Parser/MCNP_Parser.exe
+
+    - name: Update Latest Release Asset
+        # 僅在 push 到 main 分支時才執行 Release 覆蓋
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          files: Parser/MCNP_Parser.exe
+          overwrite: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -250,65 +250,37 @@ FileInfo get_file_info(const char *path) {
 }
 
 /**
- * @Natural Compare硋琿ゑ癸み
- ぃр计锣Θ俱计τ琌
-
-硈尿计跌琿
-
-ゑ磷 overflow
-
-ゑㄥ
+ * @Numeric Compare
+ * 讽笿计沽刚疊翴计(double)秈︽秆猂ゑ耕
  */
-static int natural_compare(const char *a, const char *b)
+static int numeric_compare(const char *a, const char *b)
 {
     while (*a && *b) {
+        // 狦ヘ玡じ琌计┪琌计翴钡计矪瞶 .5 硂贺薄猵
+        if (isdigit((unsigned char)*a) || (*a == '.' && isdigit((unsigned char)*(a + 1)))) {
+            char *endA, *endB;
+            
+            // 盢﹃い计场だ锣传 double
+            double valA = strtod(a, &endA);
+            double valB = strtod(b, &endB);
 
-        /* 狦ㄢ娩常琌计 △ 秈计琿ゑ耕 */
-        if (isdigit((unsigned char)*a) && isdigit((unsigned char)*b)) {
+            if (valA != valB) {
+                return (valA < valB) ? -1 : 1;
+            }
 
-            const char *startA = a;
-            const char *startB = b;
-
-            /* 铬筁玡旧 0 */
-            while (*a == '0') a++;
-            while (*b == '0') b++;
-
-            const char *numA = a;
-            const char *numB = b;
-
-            while (isdigit((unsigned char)*a)) a++;
-            while (isdigit((unsigned char)*b)) b++;
-
-            size_t lenA = a - numA;
-            size_t lenB = b - numB;
-
-            /* ゑ计计 */
-            if (lenA != lenB)
-                return (lenA < lenB) ? -1 : 1;
-
-            /*  △ 硋ゑ */
-            int cmp = strncmp(numA, numB, lenA);
-            if (cmp != 0)
-                return cmp;
-
-            /* 计单 △ ゑ﹍计琿磷 01 == 1 拜肈 */
-            size_t fullLenA = a - startA;
-            size_t fullLenB = b - startB;
-
-            if (fullLenA != fullLenB)
-                return (fullLenA < fullLenB) ? -1 : 1;
-
+            // 狦计单ㄒ 1.00 籔 1.0玥铬筁矪瞶计场だ膥尿ゑ癸
+            a = endA;
+            b = endB;
         } else {
-            /* 獶计 △ タ盽じゑ耕 */
-            if (*a != *b)
+            // じゑ耕
+            if (*a != *b) {
                 return (unsigned char)*a - (unsigned char)*b;
-
+            }
             a++;
             b++;
         }
     }
 
-    /* ゑ */
     return (unsigned char)*a - (unsigned char)*b;
 }
 
@@ -319,7 +291,7 @@ static int compareNames(const void *a, const void *b)
 {
     const char * const *pa = a;
     const char * const *pb = b;
-    return natural_compare(*pa, *pb);
+    return numeric_compare(*pa, *pb);
 }
 
 /**

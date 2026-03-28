@@ -531,9 +531,9 @@ int loadSingleFileData(const char* path, DynamicTable* dt, long long particles, 
             continue;
         }
         
-        // 2. 抓取對應粒子數 (NPS) 的數據列
+        // 2. 抓取對應粒子數 (NPS) 的數據列，一定有科學記號E 
         long long nps_check;
-        if (sscanf(line, "%lld", &nps_check) == 1 && nps_check == particles && state == 1) {
+        if (sscanf(line, "%lld", &nps_check) == 1 && nps_check == particles && (strstr(line, "E") || strstr(line, "e")) && state == 1) {
             int data_group_idx = 0; 
             char *token = strtok(line, " \t\n");
             token = strtok(NULL, " \t\n"); // 跳過 NPS 欄位本身

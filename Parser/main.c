@@ -388,7 +388,7 @@ int main() {
     setColor(LOG_INFO);
     printf(" __________________________________________________________ \n");
     printf("|                                                          |\n");
-    printf("|         M C N P   D A T A   T O O L K I T   v3.0.0       |\n");
+    printf("|         M C N P   D A T A   T O O L K I T   v3.0.1       |\n");
     printf("|__________________________________________________________|\n\n");
     setColor(LOG_NORMAL);
 	
@@ -422,11 +422,11 @@ int main() {
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
-    wc.lpszClassName = "MCNPParser";
+    wc.lpszClassName = "MCNPDataToolkit";
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     RegisterClass(&wc);
 
-    HWND hwnd = CreateWindow("MCNPParser", "MCNP 數據整合工具", 
+    HWND hwnd = CreateWindow("MCNPDataToolkit", "MCNP 數據整合工具", 
                              WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE, 
                              (GetSystemMetrics(SM_CXSCREEN)-300)/2, (GetSystemMetrics(SM_CYSCREEN)-300)/2, 
                              300, 300, NULL, NULL, hInstance, NULL);

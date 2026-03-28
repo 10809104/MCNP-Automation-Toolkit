@@ -2,8 +2,8 @@
 ================ 版權所有，翻印必究 =============== */
 #define LINE_BUF 1024
 #define SPACE_THRESHOLD 5
-#define TALLY_KEY_LEN 11
-#define TALLY_KEY "   tally   "
+#define TALLY_KEY_LEN 16 
+#define TALLY_KEY "        tally   "
 
 /* =================  Parser functions  ================= */
 
@@ -247,6 +247,69 @@ FileInfo get_file_info(const char *path) {
 
     fclose(fp);
     return report;
+}
+
+/**
+ * @Natural Compare（逐段比對核心）
+ 不把數字轉成整數，而是：
+
+連續數字視為一段
+
+先比長度（避免 overflow）
+
+再比字典序
+ */
+static int natural_compare(const char *a, const char *b)
+{
+    while (*a && *b) {
+
+        /* 如果兩邊都是數字 → 進入數字段比較 */
+        if (isdigit((unsigned char)*a) && isdigit((unsigned char)*b)) {
+
+            const char *startA = a;
+            const char *startB = b;
+
+            /* 跳過前導 0 */
+            while (*a == '0') a++;
+            while (*b == '0') b++;
+
+            const char *numA = a;
+            const char *numB = b;
+
+            while (isdigit((unsigned char)*a)) a++;
+            while (isdigit((unsigned char)*b)) b++;
+
+            size_t lenA = a - numA;
+            size_t lenB = b - numB;
+
+            /* 先比數字長度（數值大小） */
+            if (lenA != lenB)
+                return (lenA < lenB) ? -1 : 1;
+
+            /* 長度相同 → 逐字比 */
+            int cmp = strncmp(numA, numB, lenA);
+            if (cmp != 0)
+                return cmp;
+
+            /* 數字相等 → 比原始數字段長度（避免 01 == 1 問題） */
+            size_t fullLenA = a - startA;
+            size_t fullLenB = b - startB;
+
+            if (fullLenA != fullLenB)
+                return (fullLenA < fullLenB) ? -1 : 1;
+
+        } else {
+            /* 非數字 → 正常字元比較 */
+            if (*a != *b)
+                return (unsigned char)*a - (unsigned char)*b;
+
+            a++;
+            b++;
+        }
+    }
+
+    /* 比長度 */
+    return (unsigned char)*a - (unsigned char)*b;
 }
 
 /**

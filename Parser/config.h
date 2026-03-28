@@ -14,7 +14,7 @@
 #define MB_ICONSHIELD 0x0000004CL
 #endif
 // ª©¥»¥Ø¼Ð
-#define CURRENT_VERSION "v3.0.0"
+#define CURRENT_VERSION "v3.0.1"
 #define VERSION_URL "https://raw.githubusercontent.com/10809104/MCNP-Automation-Toolkit/main/Parser/version.txt"
 #define EXE_URL "https://github.com/10809104/MCNP-Automation-Toolkit/releases/latest/download/MCNP_Parser.exe"
 #define LATEST_RELEASE_URL "https://github.com/10809104/MCNP-Automation-Toolkit/releases/latest"
